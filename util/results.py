@@ -95,7 +95,8 @@ class DataLoader(object):
                  seg_path="/home/zhaosheng/paper2/online_code/cbamunet-pix2pix/results/seg/",
                  raw_img_path = "/home/zhaosheng/paper2/online_code/cbamunet-pix2pix/results/real_ct_niis_0327/",
                  nii_save_path = "/home/zhaosheng/paper2/online_code/cbamunet-pix2pix/results/fake_ct_niis/",
-                 test_list = ['003', '099', '033', '136', '011', '086', '077', '102', '016', '022']):
+                 test_list = ['003', '099', '033', '136', '011', '086', '077', '102', '016', '022'],
+                 epoch=300):
         
         """Initialization function.
            Completes the loading of data and the switching of directories.
@@ -117,7 +118,7 @@ class DataLoader(object):
         
         self.files_all = []
         for index in range(5):
-            path = os.path.join(self.ROOT,f"k{index}_300")
+            path = os.path.join(self.ROOT,f"k{index}_{epoch}")
             files = sorted([_file for _file in os.listdir(path)],key=self._get_slice_num)
             for xx in files:
                 if index>0 and (xx.split("/")[-1].split("_")[0] in self.test_list):
@@ -348,6 +349,12 @@ class DataLoader(object):
         fake_img[fake_img>1700] = 1700
         os.makedirs(self.nii_save_path,exist_ok=True)
         ants.image_write(fake_img,os.path.join(self.nii_save_path,f"{self.net_name}_{pname}.nii"))
+
+
+        real_img[real_img<-1000] = -1000
+        real_img[real_img>1700] = 1700
+        os.makedirs(self.nii_save_path,exist_ok=True)
+        ants.image_write(real_img,os.path.join(self.nii_save_path,f"{self.net_name}_{pname}_real.nii"))
         return 0
         
         
