@@ -13,6 +13,7 @@
 # @Describe: training script for MR-to-CT translation
 
 import time
+import os
 from options.train_options import TrainOptions
 from data import create_dataset
 from models import create_model
@@ -23,7 +24,10 @@ import numpy as np
 import random
 from util.visualizer import save_images
 from collections import OrderedDict
+import faulthandler
+faulthandler.enable()
 
+from torch.utils.tensorboard import SummaryWriter
 
 def setup_seed(seed):
     torch.manual_seed(seed)
@@ -33,7 +37,7 @@ def setup_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 
-def traink(model, visualizer, train_loader, val_loader, opt):
+def traink(model, visualizer, train_loader, val_loader, test_dataset, opt,writer):
     new_k_index = True
     test_scores = {'X': [], 'Y': [], 'legend': [
         f"K:{opt.k_index} Val Score", f"K:{opt.k_index} Test Score"]}
@@ -172,6 +176,12 @@ def traink(model, visualizer, train_loader, val_loader, opt):
         with open(f"./scores/{name}.txt", "a") as f:
             f.write(str(opt.k_index)+","+str(epoch)+","+str(train_score)+"," +
                     str(val_score)+","+str(test_score)+"\n")  # 自带文件关闭功能，不需要再写f.close() 记得添加换行符！
+        
+        writer.add_scalar(f"k{opt.k_index} learning rate",lr, global_step=epoch, walltime=None)
+        writer.add_scalar(f"k{opt.k_index} train loss",train_score, global_step=epoch, walltime=None)
+        writer.add_scalar(f"k{opt.k_index} val loss",val_score, global_step=epoch, walltime=None)
+        writer.add_scalar(f"k{opt.k_index} test loss",test_score, global_step=epoch, walltime=None)
+
 
         print(
             f"mean MAE:{test_score} HU. Min MAE :{best_score} in {best_epoch}")
@@ -190,6 +200,10 @@ def traink(model, visualizer, train_loader, val_loader, opt):
 
 
 if __name__ == '__main__':
+
+    
+    
+
     opt = TrainOptions().parse()   # get training options
     torch.cuda.empty_cache()
     # Set fixed random number seed
@@ -238,6 +252,11 @@ if __name__ == '__main__':
     else:
 
         visualizer = Visualizer(opt)
+        
+        board_path = f"./runs/{opt.name}"
+        os.makedirs(board_path,exist_ok=True)
+        writer = SummaryWriter(board_path)
+
         for i in range(opt.k_fold):
             print('*'*25, 'K = ', i, '', '*'*25)
             Visualizer.k_index = i
@@ -273,7 +292,7 @@ if __name__ == '__main__':
             # regular setup: load and print networks; create schedulers
             model.setup(opt)
             train_score, val_score, test_score = traink(
-                model, visualizer, train_dataset, valid_dataset, opt)
+                model, visualizer, train_dataset, valid_dataset, test_dataset,opt,writer)
             train_score_total += train_score
             val_score_total += val_score
             test_score_total += test_score

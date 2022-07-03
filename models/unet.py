@@ -214,3 +214,76 @@ class CBAMUNet(nn.Module):
         x = self.up4(x, x1Att)
         logits = self.outc(x)
         return logits
+
+class SelfAttentionResUnet(nn.Module):
+    def __init__(self, n_channels, n_classes, bilinear=True,reduction_ratio=16):
+        super(SelfAttentionResUnet, self).__init__()
+        self.n_channels = n_channels
+        self.n_classes = n_classes
+        self.bilinear = bilinear
+
+        self.inc = DoubleConv(n_channels, 64)
+        self.cbam1 = CBAM(64, reduction_ratio=reduction_ratio)
+        self.sigle_conv1 = nn.Sequential(
+            nn.Conv2d(n_channels, 64, kernel_size=1, padding=0))
+
+
+        self.down1 = Down(64, 128)
+        self.cbam2 = CBAM(128, reduction_ratio=reduction_ratio)
+        self.sigle_conv2 = nn.Sequential(
+            nn.MaxPool2d(2),
+            nn.Conv2d(64, 128, kernel_size=1, padding=0))
+
+        self.down2 = Down(128, 256)
+        self.cbam3 = CBAM(256, reduction_ratio=reduction_ratio)
+        self.sigle_conv3 = nn.Sequential(
+            nn.MaxPool2d(2),
+            nn.Conv2d(128, 256, kernel_size=1, padding=0))
+
+        self.down3 = Down(256, 512)
+        self.cbam4 = CBAM(512, reduction_ratio=reduction_ratio)
+        self.sigle_conv4 = nn.Sequential(
+            nn.MaxPool2d(2),
+            nn.Conv2d(256, 512, kernel_size=1, padding=0))
+
+
+        factor = 2 if bilinear else 1
+        self.down4 = Down(512, 1024 // factor)
+        self.cbam5 = CBAM(1024 // factor, reduction_ratio=reduction_ratio)
+        self.sigle_conv5 = nn.Sequential(
+            nn.MaxPool2d(2),
+            nn.Conv2d(512, 1024 // factor, kernel_size=1, padding=0))
+
+        self.up1 = Up(1024, 512 // factor, bilinear)
+        self.up2 = Up(512, 256 // factor, bilinear)
+        self.up3 = Up(256, 128 // factor, bilinear)
+        self.up4 = Up(128, 64, bilinear)
+        self.outc = OutConv(64, n_classes)
+
+    def forward(self, x):
+        x1 = self.inc(x)
+        x1_res = self.sigle_conv1(x)
+        x1Att = self.cbam1(x1)+x1_res
+
+        x2 = self.down1(x1)
+        x2_res = self.sigle_conv2(x1)
+        x2Att = self.cbam2(x2)+x2_res
+
+        x3 = self.down2(x2)
+        x3_res = self.sigle_conv3(x2)
+        x3Att = self.cbam3(x3)+x3_res
+
+        x4 = self.down3(x3)
+        x4_res = self.sigle_conv4(x3)
+        x4Att = self.cbam4(x4)+x4_res
+
+        x5 = self.down4(x4)
+        x5_res = self.sigle_conv5(x4)
+        x5Att = self.cbam5(x5)+x5_res
+
+        x = self.up1(x5Att, x4Att)
+        x = self.up2(x, x3Att)
+        x = self.up3(x, x2Att)
+        x = self.up4(x, x1Att)
+        logits = self.outc(x)
+        return logits

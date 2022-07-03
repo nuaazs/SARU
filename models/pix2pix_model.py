@@ -212,7 +212,8 @@ class Pix2PixModel(BaseModel):
                     pic_file_name = batch['A_paths'][xx].split(".")[0]
                     fake_ct = self.fake_B[xx,0,:,:]
                     real_ct = self.real_B[xx,0,:,:]
-                    _loss = criterion_pixelwise((fake_ct+1)/2.0*1800-1000,(real_ct+1)/2.0*1800-1000 ).item()
+                    _loss = criterion_pixelwise(fake_ct,real_ct).item()
+                    # _loss = criterion_pixelwise((fake_ct+1)/2.0*1800-1000,(real_ct+1)/2.0*1800-1000 ).item()
                     tot += _loss
                     _n += 1
 

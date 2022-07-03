@@ -19,7 +19,6 @@ import torch
 import models
 import data
 
-
 class BaseOptions():
     """This class defines options used during both training and test time.
 
@@ -34,7 +33,7 @@ class BaseOptions():
     def initialize(self, parser):
         """Define the common options that are used in both training and test."""
         # basic parameters
-        parser.add_argument('--dataroot', type=str, default=r"/home/limingzhu/limingzhu2022/ct_t1/mrct_png_data_20220624",
+        parser.add_argument('--dataroot', type=str, default=r"/mnt/zhaosheng/mrct/data/mrct_png_data_20220624",
                             help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
         parser.add_argument('--name', type=str, default='experiment_name',
                             help='name of the experiment. It decides where to store samples and models')
@@ -76,7 +75,7 @@ class BaseOptions():
                             default='AtoB', help='AtoB or BtoA')
         parser.add_argument('--serial_batches', action='store_true',
                             help='if true, takes images in order to make batches, otherwise takes them randomly')
-        parser.add_argument('--num_threads', default=60,
+        parser.add_argument('--num_threads', default=10,
                             type=int, help='# threads for loading data')
         parser.add_argument('--batch_size', type=int,
                             default=8, help='input batch size')

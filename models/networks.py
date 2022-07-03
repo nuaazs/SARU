@@ -22,7 +22,7 @@ from torch.optim import lr_scheduler
 from models.unet_modules import UnetGenerator
 from models.resnet_modules import ResnetGenerator
 from models.SARU import SARU
-from models.unet import UNet,CBAMUNet
+from models.unet import UNet,CBAMUNet,SelfAttentionResUnet
 from smat_models.SmaAt_UNet import SmaAt_UNet
 from models.denseunet import DenseUnet
 #from models.resnet import resnet101
@@ -170,16 +170,23 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=True, ini
     if netG == 'unet':
         net = UNet(input_nc, output_nc)
     elif netG == 'resnet':
-        #net = resnet101()
         net = ResnetGenerator(input_nc, output_nc, use_attn=False, ngf=ngf,use_dropout=use_dropout, n_blocks=9)
+    elif netG == 'resnet_attn':
+        net = ResnetGenerator(input_nc, output_nc, use_attn=True, ngf=ngf,use_dropout=use_dropout, n_blocks=9)
     elif netG == 'smatunet':
         net = SmaAt_UNet(input_nc, output_nc)
+    elif netG == 'unet_128_attn':
+        net = UnetGenerator(input_nc=input_nc, output_nc=output_nc, num_downs=7,ngf=64,use_attention=True,use_dropout=use_dropout)
     elif netG == 'unet_128':
-        net = UnetGenerator(input_nc, output_nc, 5)
+        net = UnetGenerator(input_nc=input_nc, output_nc=output_nc, num_downs=7,ngf=64,use_attention=False,use_dropout=use_dropout)
     elif netG == 'unet_256':
         net = UnetGenerator(input_nc, output_nc, 7)
     elif netG == 'SARU':
         net = SARU(input_nc, output_nc)
+    elif netG == 'cbamunet':
+        net = CBAMUNet(input_nc, output_nc)
+    elif netG == 'selfattentionresunet':
+        net = SelfAttentionResUnet(input_nc, output_nc)
     else:
         raise NotImplementedError(
             'Generator model name [%s] is not recognized' % netG)

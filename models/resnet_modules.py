@@ -18,7 +18,7 @@ import torch.nn as nn
 from torch.nn import init
 from torch.optim import lr_scheduler
 import torch.nn.functional as F
-from models.cbam_modules import *
+from models.cbam_modules import CBAM
 
 class ResnetGenerator(nn.Module):
     """Resnet-based generator that consists of Resnet blocks between a few downsampling/upsampling operations.
@@ -45,16 +45,12 @@ class ResnetGenerator(nn.Module):
         else:
             use_bias = nn.BatchNorm2d == nn.InstanceNorm2d
 
-        self.ca1 = ChannelAttention(input_nc)
-        self.sa1 = SpatialAttention()
         if use_attn:
             model = [nn.ReflectionPad2d(3),
-                    self.sa1,
-                    # self.ca1,
+                    CBAM(input_nc),
                     nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
                     nn.BatchNorm2d(ngf),
                     nn.ReLU(True)
-                    #self.ca1,
                     ]
         else:
             model = [nn.ReflectionPad2d(3),
@@ -66,25 +62,39 @@ class ResnetGenerator(nn.Module):
         n_downsampling = 2
         for i in range(n_downsampling):  # add downsampling layers
             mult = 2 ** i
-            model += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=use_bias),
-                      self.sa1,
-                      nn.BatchNorm2d(ngf * mult * 2),
-                      nn.ReLU(True)]
+            if use_attn:
+                model += [#CBAM(input_nc),
+                        nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=use_bias),
+                        nn.BatchNorm2d(ngf * mult * 2),
+                        nn.ReLU(True)]
+            else:
+                model += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=use_bias),
+                        nn.BatchNorm2d(ngf * mult * 2),
+                        nn.ReLU(True)]
 
         mult = 2 ** n_downsampling
         for i in range(n_blocks):       # add ResNet blocks
-
-            model += [ResnetBlock(ngf * mult, padding_type=padding_type, use_dropout=use_dropout, use_bias=use_bias)]
-
+            if use_attn:
+                model += [CBAM(ngf * mult),ResnetBlock(ngf * mult, padding_type=padding_type, use_dropout=use_dropout, use_bias=use_bias)]
+            else:
+                model += [ResnetBlock(ngf * mult, padding_type=padding_type, use_dropout=use_dropout, use_bias=use_bias)]
         for i in range(n_downsampling):  # add upsampling layers
             mult = 2 ** (n_downsampling - i)
-            model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
-                                         kernel_size=3, stride=2,
-                                         padding=1, output_padding=1,
-                                         bias=use_bias),
-                      self.sa1,
-                      nn.BatchNorm2d(int(ngf * mult / 2)),
-                      nn.ReLU(True)]
+            if use_attn:
+                model += [#CBAM(ngf * mult),
+                        nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
+                                            kernel_size=3, stride=2,
+                                            padding=1, output_padding=1,
+                                            bias=use_bias),
+                        nn.BatchNorm2d(int(ngf * mult / 2)),
+                        nn.ReLU(True)]
+            else:
+                model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
+                                            kernel_size=3, stride=2,
+                                            padding=1, output_padding=1,
+                                            bias=use_bias),
+                        nn.BatchNorm2d(int(ngf * mult / 2)),
+                        nn.ReLU(True)]
         model += [nn.ReflectionPad2d(3)]
         model += [nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)]
         model += [nn.Tanh()]

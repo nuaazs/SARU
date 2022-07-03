@@ -195,7 +195,8 @@ class GenerateModel(BaseModel):
                         real_ct_im.save(f"./results/{opt.name}/temp_pics/k{opt.k_index}_{opt.now_epoch}/{pic_file_name}_real_B.png")
                         fake_ct_im.save(f"./results/{opt.name}/temp_pics/k{opt.k_index}_{opt.now_epoch}/{pic_file_name}_fake_B.png")
 
-                    _loss = criterion_pixelwise((fake_ct+1)/2.0*1800-1000,(real_ct+1)/2.0*1800-1000 ).item()
+                    # _loss = criterion_pixelwise((fake_ct+1)/2.0*1800-1000,(real_ct+1)/2.0*1800-1000 ).item()
+                    _loss = criterion_pixelwise(fake_ct,real_ct).item()
                     tot += _loss
                     _n += 1
                 pbar.update(self.fake_B.shape[0])
